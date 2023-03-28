@@ -89,5 +89,27 @@ class TestingLogTextFile:
         assert 'line' in logFile.read()
 
 
+class TestingBinaryFile:
+    fatherDirectory = Directory('fatherDirectory2')
 
+    def test_binary_file_create(self):
+        name = 'binary1'
+        info = 'kdvjiviufsvvush'
+        binary_file = BinaryFile(name, info, self.fatherDirectory)
+        assert binary_file.fileName == name
+        assert binary_file.info == info
+        assert binary_file.read() == info
+        assert binary_file.father == self.fatherDirectory
+
+    def test_binary_file_move(self):
+        name = 'binary2'
+        info = 'kdvjiviufsvvffush'
+        binaryFile = BinaryFile(name, info)
+        assert type(binaryFile.father) is NoneType
+        binaryFile.move(self.fatherDirectory)
+        assert binaryFile.father == self.fatherDirectory
+    def test_binaryFileDel(self):
+        binaryFile = BinaryFile('binary3')
+        del binaryFile
+        assert 'binaryFile' not in locals()
 
