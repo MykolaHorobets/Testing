@@ -1,125 +1,122 @@
-import os
+class Directory:
+    def __init__(self, dir_name, max_elements=0, father=None):
+        self.father = father
+        if self.father is not None:
+            self.father.numberOfElements += 1
+            father.listOfFiles.append(self)
+        self.dirName = dir_name
+        self.DIR_MAX_ELEMS = max_elements
+        self.numberOfElements = 0
+        self.listOfFiles = []
 
-DIR_MAX_ELEMS = 10
-MAX_BUF_FILE_SIZE = 5
+    def __delete__(self):
+        print('Destructor called, ' + self.dirName + 'was deleted')
+        return
+
+    def list_elements(self):
+        result = self.dirName + ':('
+        for item in self.listOfFiles:
+            if type(item) is Directory:
+                # result += self.dirName #+ '\n'
+                result += item.list_elements()
+            else:
+                result += item.file_name + ', ' + '\n'
+        result += ') '
+        return result
+
+    def move(self, path):
+        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
+            print('This directory is full, try other')
+            return
+        if self.father is not None:
+            self.father.numberOfElements -= 1
+            self.father.listOfFiles.pop(self.father.listOfFiles.index(self))
+        self.father = path
+        self.father.listOfFiles.append(self)
+        self.father.numberOfElements += 1
+        return
 
 
-class Node:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.parent = parent
+class BinaryFile:
+    def __init__(self, id, file_name, info=None, father=None):
+        self.fileName = file_name
+        self.info = info
+        self.father = father
+        self.id = id
 
-    def get_full_path(self):
-        if self.parent is None:
-            return self.name
-        else:
-            return os.path.join(self.parent.get_full_path(), self.name)
+    def __delete__(self):
+        print('Destructor called, ' + self.fileName + 'was deleted')
+        return
+
+    def move(self, path):
+        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
+            print('This directory is full, try other')
+            return
+        self.father = path
+        self.father.listOfFiles.append(self)
+        self.father.numberOfElements += 1
+        return
+
+    def read(self):
+        return self.info
 
 
-class Directory(Node):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent)
-        self.children = []
+class LogFile:
+    def __init__(self, file_name, info, father=None):
+        self.fileName = file_name
+        self.father = father
+        self.info = info
 
-    def create_directory(self, name):
-        if len(self.children) >= DIR_MAX_ELEMS:
-            return "Directory is full."
-        else:
-            dir = Directory(name, self)
-            self.children.append(dir)
-            return dir
+    def __delete__(self):
+        print('Destructor called', + self.fileName + 'was deleted')
+        return
 
-    def create_file(self, name, file_type):
-        if len(self.children) >= DIR_MAX_ELEMS:
-            return "Directory is full."
-        else:
-            if file_type == "Binary":
-                file = BinaryFile(name, self)
-            elif file_type == "Log":
-                file = LogFile(name, self)
-            elif file_type == "Buffer":
-                file = BufferFile(name, self)
-            self.children.append(file)
-            return "File created."
+    def move(self, path):
+        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
+            print('This directory is full, try other')
+            return
+        self.father = path
+        self.father.listOfFiles.append(self)
+        self.father.numberOfElements += 1
+        return
 
-    def delete_directory(self, name):
-        for child in self.children:
-            if isinstance(child, Directory) and child.name == name:
-                self.children.remove(child)
-                return "Directory deleted."
-        return "Directory not found."
+    def read(self):
+        return self.info
 
-    def delete_file(self, name):
-        for child in self.children:
-            if isinstance(child, File) and child.name == name:
-                self.children.remove(child)
-                return "File deleted."
-        return "File not found."
+    def append(self, new_line):
+        self.info += new_line
+        self.info += '\n'
 
-    def move_file_or_directory(self, old_path, new_parent):
 
-        node = self.get_node_by_path(old_path)
-        if node is None:
-            return "Node not found."
+class BufferFile:
+    def __init__(self, file_name, max_size=0, father=None):
+        self.fileName = file_name
+        self.father = father
+        self.info = []
+        self.MAX_BUF_FILE_SIZE = max_size
 
-        node.parent.children.remove(node)
+    def __delete__(self):
+        print('Destructor called', + self.file_name + 'was deleted')
+        return
 
-        node.parent = new_parent
-        new_parent.children.append(node)
+    def move(self, path):
+        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
+            print('This directory is full, try other')
+            return
+        self.father = path
+        self.father.listOfFiles.append(self)
+        self.father.numberOfElements += 1
+        return
 
-        return "Node moved."
+    def push(self, item):
+        if len(self.info) >= self.MAX_BUF_FILE_SIZE:
+            print('This file is full with items')
+            return
+        self.info.append(item)
 
-    def list_files_and_directories(self):
-        return [child.name for child in self.children]
-
-    def get_node_by_path(self, path):
-        if path == self.name:
-            return self
-
-        for child in self.children:
-            if isinstance(child, Directory):
-                node = child.get_node_by_path(path)
-                if node is not None:
-                    return node
-            elif child.name == path:
-                return child
-
+    def consume(self):
+        if len(self.info) >= 1:
+            temp = self.info[0]
+            self.info.pop(0)
+            return temp
         return None
-
-
-class File(Node):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent)
-
-    def read_file(self):
-        pass
-
-
-class BinaryFile(File):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent)
-
-    def read_file(self):
-        return "Binary file content."
-
-
-class LogFile(File):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent)
-        self.content = []
-
-    def read_file(self):
-        return "\n".join(self.content)
-
-    def append_line(self, line):
-        self.content.append(line)
-
-
-class BufferFile(File):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent)
-        self.buffer = []
-
-    def push_element(self, element):
-        if len(self.buffer) < MAX_BUF_FILE_SIZE:
-            self.buffer.append(element)

@@ -1,32 +1,22 @@
-from fs import Directory, BinaryFile, LogFile, BufferFile, File
+from fs import Directory, BinaryFile, LogFile, BufferFile
 
+print('this is lab1')
+root = Directory('root', 100)
+directory1 = Directory('child1', 20, root)
+directory2 = Directory('child2', 3, root)
+directory3 = Directory('chchild', 10, directory1)
 
-def print_node(node, indent=0):
-    if isinstance(node, Directory):
-        print("  " * indent + "+ " + node.name)
-        for child in node.children:
-            print_node(child, indent + 1)
-    elif isinstance(node, File):
-        print("  " * indent + "- " + node.name)
+binaryFile1 = BinaryFile('binFile1', 'info1', root)
+binaryFile2 = BinaryFile('binFile2', 'info2', directory3)
+print(binaryFile2.read())
 
+logTextFile1 = LogFile('log1', 'loginfo1', root)
+logTextFile2 = LogFile('log2', 'This is', directory2)
+logTextFile2.append(' QA lab1')
+print(logTextFile2.read())
 
-
-root = Directory("")
-
-dir1 = root.create_directory("dir1")
-dir2 = root.create_directory("dir2")
-
-
-subdir1 = dir1.create_directory("subdir1")
-subdir2 = dir1.create_directory("subdir2")
-binary_file = BinaryFile("binary_file", dir1)
-log_file = LogFile("log_file", subdir1)
-buffer_file = BufferFile("buffer_file", subdir2)
-
-subsubdir1 = subdir1.create_directory("subsubdir1")
-subsubdir2 = subdir1.create_directory("subsubdir2")
-binary_file2 = BinaryFile("binary_file2", subdir1)
-log_file2 = LogFile("log_file2", subsubdir1)
-buffer_file2 = BufferFile("buffer_file2", subsubdir2)
-
-print_node(root)
+bufferFile1 = BufferFile('buf1', 5, root)
+bufferFile2 = BufferFile('buf2', 3, directory1)
+print(type(root.listOfFiles))
+print("-----------------------------------------------------------------------------------------")
+print(root.list_elements())
