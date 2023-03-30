@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request
 from fs import FileSystem, Directory, BinaryFile, BufferFile, LogFile, get_items, get_file_data
 
 app = Flask(__name__)
-
 fs = FileSystem()
 
 
