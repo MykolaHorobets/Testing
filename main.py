@@ -1,63 +1,107 @@
-from fs import Directory, BinaryFile, LogFile, BufferFile, FileSystem
-from flask import Flask, jsonify, request, redirect, url_for, abort
-import json
+from flask import Flask, jsonify, request
+from fs import FileSystem, Directory, BinaryFile, BufferFile, LogFile, get_items, get_file_data
 
 app = Flask(__name__)
 
-client = app.test_client()
+fs = FileSystem()
 
-root = Directory("root", 100)
-fs = FileSystem(root)
 
-fs.add_item(Directory('subroot1'), 'root')
-fs.add_item(Directory('subroot2'), 'root')
+fs.addItem(Directory('sub1'), 'root')
+fs.addItem(Directory('sub2'), 'root')
 b = BufferFile('buff')
-b.push('sdsd')
-b.push('dfgkjdfg')
-b.push('sdfsdfh')
-fs.add_item(BinaryFile('binFile', "dsdfksdbf"), 'root')
-fs.add_item(b, 'root')
-
+b.push('1')
+b.push('2')
+b.push('3')
+fs.addItem(BinaryFile('binFile', "bibin"), 'root')
+fs.addItem(b, 'root')
 
 @app.get("/directory/<path:directory_path>")
 def get_directory(directory_path):
-    directory = fs.find_directory(directory_path)
+    directory = fs.findDir(directory_path)
 
     if directory is None:
         return {'error_message': 'Directory not found'}, 400
 
-    return fs.get_items(directory)
-
+    items = directory.items()
+    return get_items(items)
 
 
 @app.get("/bufferfile/<path:file_path>")
 def get_buffer_file(file_path):
-    buffer_file = fs.find_file(file_path)
+    buffer_file = fs.findFile(file_path)
 
     if buffer_file is None or type(buffer_file) is not BufferFile:
         return {'error_message': 'File not found'}, 400
 
-    return fs.get_item(buffer_file)
+    return jsonify(get_file_data(buffer_file))
 
 
 @app.get("/logfile/<path:file_path>")
 def get_log_file(file_path):
-    log_file = fs.find_file(file_path)
+    log_file = fs.findFile(file_path)
 
     if log_file is None or type(log_file) is not LogFile:
         return {'error_message': 'File not found'}, 400
 
-    return fs.get_item(log_file)
+    return jsonify(get_file_data(log_file))
 
 
 @app.get("/binaryfile/<path:file_path>")
 def get_binary_file(file_path):
-    binary_file = fs.find_file(file_path)
+    binary_file = fs.findFile(file_path)
 
     if binary_file is None or type(binary_file) is not BinaryFile:
         return {'error_message': 'File not found'}, 400
 
-    return fs.get_item(binary_file)
+    return jsonify(get_file_data(binary_file))
+
+
+@app.delete("/directory/<path:directory_path>")
+def delete_directory(directory_path):
+    directory = fs.findDir(directory_path)
+
+    if directory is None or type(directory) is not Directory:
+        return {'error_message': 'Directory not found'}, 400
+
+    is_removed = fs.removeItem(directory_path)
+
+    if is_removed:
+        return {'success': True}
+    else:
+        return {'error_message': 'Directory could not be removed'}, 400
+
+
+@app.delete("/binaryfile/<path:file_path>")
+def delete_binaryfile(file_path):
+    bin_file = fs.findFile(file_path)
+
+    if bin_file is None or type(bin_file) is not BinaryFile:
+        return {'error_message': 'BinaryFile not found'}, 400
+
+    fs.removeItem(file_path)
+    return {'success': True}
+
+
+@app.delete("/logfile/<path:file_path>")
+def delete_logfile(file_path):
+    log_file = fs.findFile(file_path)
+
+    if log_file is None or type(log_file) is not LogFile:
+        return {'error_message': 'LogFile not found'}, 400
+
+    fs.removeItem(file_path)
+    return {'success': True}
+
+
+@app.delete("/bufferfile/<path:file_path>")
+def delete_bufferfile(file_path):
+    buffer_file = fs.findFile(file_path)
+
+    if buffer_file is None or type(buffer_file) is not BufferFile:
+        return {'error_message': 'BufferFile not found'}, 400
+
+    fs.removeItem(file_path)
+    return {'success': True}
 
 
 @app.post("/directory/")
@@ -66,12 +110,12 @@ def create_directory():
     directory_path = json.get('directory_path')
     directory_name = json.get('directory_name')
     new_directory = Directory(directory_name)
-    is_created = fs.add_item(new_directory, directory_path)
+    is_created = fs.addItem(new_directory, directory_path)
 
     if is_created:
         return {'success': True}
     else:
-        return {'error_message': 'Item with such name already exists'}, 400
+        return {'error_message': 'Directory creation failed'}, 400
 
 
 @app.post("/bufferfile/")
@@ -80,12 +124,12 @@ def create_bufferfile():
     directory_path = json.get('directory_path')
     buffer_file_name = json.get('file_name')
     new_file = BufferFile(buffer_file_name)
-    is_created = fs.add_item(new_file, directory_path)
+    is_created = fs.addItem(new_file, directory_path)
 
     if is_created:
         return {'success': True}
     else:
-        return {'error_message': 'Item with such name already exists'}, 400
+        return {'error_message': 'File creation failed'}, 400
 
 
 @app.post("/logfile/")
@@ -94,12 +138,12 @@ def create_logfile():
     directory_path = json.get('directory_path')
     binary_file_name = json.get('file_name')
     new_file = LogFile(binary_file_name, "")
-    is_created = fs.add_item(new_file, directory_path)
+    is_created = fs.addItem(new_file, directory_path)
 
     if is_created:
         return {'success': True}
     else:
-        return {'error_message': 'Item with such name already exists'}, 400
+        return {'error_message': 'File creation failed'}, 400
 
 
 @app.post("/binaryfile/")
@@ -109,12 +153,12 @@ def create_binaryfile():
     binary_file_name = json.get('file_name')
     file_content = json.get('content')
     new_file = BinaryFile(binary_file_name, file_content)
-    is_created = fs.add_item(new_file, directory_path)
+    is_created = fs.addItem(new_file, directory_path)
 
     if is_created:
         return {'success': True}
     else:
-        return {'error_message': 'Item with such name already exists'}, 400
+        return {'error_message': 'File creation failed'}, 400
 
 
 @app.post("/logfile/log")
@@ -126,7 +170,7 @@ def log_line_to_file():
     if log_line is None or log_file_path is None:
         return {'error_message': 'Invalid data'}, 400
 
-    log_file = fs.find_file(log_file_path)
+    log_file = fs.findFile(log_file_path)
 
     if log_file is None:
         return {'error_message': 'File not found'}, 400
@@ -147,7 +191,7 @@ def push_element_to_buffer_file():
     if buffer_file_path is None or element is None:
         return {'error_message': 'Invalid data'}, 400
 
-    buffer_file = fs.find_file(buffer_file_path)
+    buffer_file = fs.findFile(buffer_file_path)
 
     if buffer_file is None:
         return {'error_message': 'File not found'}, 400
@@ -165,7 +209,7 @@ def push_element_to_buffer_file():
 
 @app.get("/bufferfile/pop/<path:buffer_file_path>")
 def pop_element_from_buffer_file(buffer_file_path):
-    buffer_file = fs.find_file(buffer_file_path)
+    buffer_file = fs.findFile(buffer_file_path)
 
     if buffer_file is None:
         return {'error_message': 'File not found'}, 400
@@ -187,12 +231,12 @@ def move_bufferfile():
     buffer_file_path = json.get('buffer_file_path')
     destination_path = json.get('destination_path')
 
-    buffer_file = fs.find_file(buffer_file_path)
+    buffer_file = fs.findFile(buffer_file_path)
 
     if buffer_file is None or type(buffer_file) is not BufferFile:
         return {'error_message': 'File not found'}, 400
 
-    is_moved = fs.move_item(buffer_file_path, destination_path)
+    is_moved = fs.moveItem(buffer_file_path, destination_path)
 
     if is_moved:
         return {'success': True}
@@ -206,12 +250,12 @@ def move_directory():
     directory_path = json.get('directory_path')
     destination_path = json.get('destination_path')
 
-    directory = fs.find_directory(directory_path)
+    directory = fs.findDir(directory_path)
 
     if directory is None or type(directory) is not Directory:
-        return {'error_message': 'File not found'}, 400
+        return {'error_message': 'Directory not found'}, 400
 
-    is_moved = fs.move_item(directory_path, destination_path)
+    is_moved = fs.moveItem(directory_path, destination_path)
 
     if is_moved:
         return {'success': True}
@@ -225,12 +269,12 @@ def move_logfile():
     log_file_path = json.get('log_file_path')
     destination_path = json.get('destination_path')
 
-    log_file = fs.find_file(log_file_path)
+    log_file = fs.findFile(log_file_path)
 
     if log_file is None or type(log_file) is not LogFile:
         return {'error_message': 'File not found'}, 400
 
-    is_moved = fs.move_item(log_file_path, destination_path)
+    is_moved = fs.moveItem(log_file_path, destination_path)
 
     if is_moved:
         return {'success': True}
@@ -244,65 +288,17 @@ def move_binaryfile():
     binary_file_path = json.get('binary_file_path')
     destination_path = json.get('destination_path')
 
-    binary_file = fs.find_file(binary_file_path)
+    binary_file = fs.findFile(binary_file_path)
 
     if binary_file is None or type(binary_file) is not BinaryFile:
         return {'error_message': 'File not found'}, 400
 
-    is_moved = fs.move_item(binary_file_path, destination_path)
+    is_moved = fs.moveItem(binary_file_path, destination_path)
 
     if is_moved:
         return {'success': True}
     else:
         return {'error_message': f'File can not be moved to {destination_path}'}, 400
-
-
-@app.delete("/directory/<path:directory_path>")
-def delete_directory(directory_path):
-    directory = fs.find_directory(directory_path)
-
-    if directory is None or directory is not Directory:
-        return {'error_message': 'Directory not found'}, 400
-
-    is_removed = fs.delete_directory(directory)
-
-    if is_removed:
-        return {'success': True}
-    else:
-        return {'error_message': 'Directory could not be removed'}, 400
-
-
-@app.delete("/binaryfile/<path:file_path>")
-def delete_binaryfile(file_path):
-    bin_file = fs.find_file(file_path)
-
-    if bin_file is None or bin_file is not BinaryFile:
-        return {'error_message': 'BinaryFile not found'}, 400
-
-    fs.remove_item(bin_file)
-    return {'success': True}
-
-
-@app.delete("/logfile/<path:file_path>")
-def delete_logfile(file_path):
-    log_file = fs.find_file(file_path)
-
-    if log_file is None or log_file is not LogFile:
-        return {'error_message': 'LogFile not found'}, 400
-
-    fs.remove_item(log_file)
-    return {'success': True}
-
-
-@app.delete("/bufferfile/<path:file_path>")
-def delete_bufferfile(file_path):
-    buffer_file = fs.find_file(file_path)
-
-    if buffer_file is None or buffer_file is not BufferFile:
-        return {'error_message': 'LogFile not found'}, 400
-
-    fs.remove_item(buffer_file)
-    return {'success': True}
 
 
 if __name__ == '__main__':
