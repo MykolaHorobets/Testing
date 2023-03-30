@@ -4,6 +4,8 @@ import json
 
 app = Flask(__name__)
 
+client = app.test_client()
+
 root = Directory("root", 100)
 fs = FileSystem(root)
 
@@ -56,54 +58,6 @@ def get_binary_file(file_path):
         return {'error_message': 'File not found'}, 400
 
     return fs.get_item(binary_file)
-
-
-@app.delete("/directory/<path:directory_path>")
-def delete_directory(directory_path):
-    directory = fs.find_directory(directory_path)
-
-    if directory is None or directory is not Directory:
-        return {'error_message': 'Directory not found'}, 400
-
-    is_removed = fs.delete_directory(directory)
-
-    if is_removed:
-        return {'success': True}
-    else:
-        return {'error_message': 'Directory could not be removed'}, 400
-
-
-@app.delete("/binaryfile/<path:file_path>")
-def delete_binaryfile(file_path):
-    bin_file = fs.find_file(file_path)
-
-    if bin_file is None or bin_file is not BinaryFile:
-        return {'error_message': 'BinaryFile not found'}, 400
-
-    fs.remove_item(bin_file)
-    return {'success': True}
-
-
-@app.delete("/logfile/<path:file_path>")
-def delete_logfile(file_path):
-    log_file = fs.find_file(file_path)
-
-    if log_file is None or log_file is not LogFile:
-        return {'error_message': 'LogFile not found'}, 400
-
-    fs.remove_item(log_file)
-    return {'success': True}
-
-
-@app.delete("/bufferfile/<path:file_path>")
-def delete_bufferfile(file_path):
-    buffer_file = fs.find_file(file_path)
-
-    if buffer_file is None or buffer_file is not BufferFile:
-        return {'error_message': 'LogFile not found'}, 400
-
-    fs.remove_item(buffer_file)
-    return {'success': True}
 
 
 @app.post("/directory/")
@@ -301,6 +255,54 @@ def move_binaryfile():
         return {'success': True}
     else:
         return {'error_message': f'File can not be moved to {destination_path}'}, 400
+
+
+@app.delete("/directory/<path:directory_path>")
+def delete_directory(directory_path):
+    directory = fs.find_directory(directory_path)
+
+    if directory is None or directory is not Directory:
+        return {'error_message': 'Directory not found'}, 400
+
+    is_removed = fs.delete_directory(directory)
+
+    if is_removed:
+        return {'success': True}
+    else:
+        return {'error_message': 'Directory could not be removed'}, 400
+
+
+@app.delete("/binaryfile/<path:file_path>")
+def delete_binaryfile(file_path):
+    bin_file = fs.find_file(file_path)
+
+    if bin_file is None or bin_file is not BinaryFile:
+        return {'error_message': 'BinaryFile not found'}, 400
+
+    fs.remove_item(bin_file)
+    return {'success': True}
+
+
+@app.delete("/logfile/<path:file_path>")
+def delete_logfile(file_path):
+    log_file = fs.find_file(file_path)
+
+    if log_file is None or log_file is not LogFile:
+        return {'error_message': 'LogFile not found'}, 400
+
+    fs.remove_item(log_file)
+    return {'success': True}
+
+
+@app.delete("/bufferfile/<path:file_path>")
+def delete_bufferfile(file_path):
+    buffer_file = fs.find_file(file_path)
+
+    if buffer_file is None or buffer_file is not BufferFile:
+        return {'error_message': 'LogFile not found'}, 400
+
+    fs.remove_item(buffer_file)
+    return {'success': True}
 
 
 if __name__ == '__main__':
