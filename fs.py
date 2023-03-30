@@ -1,122 +1,240 @@
-class Directory:
-    def __init__(self, dir_name, max_elements=0, father=None):
-        self.father = father
-        if self.father is not None:
-            self.father.numberOfElements += 1
-            father.listOfFiles.append(self)
-        self.dirName = dir_name
-        self.DIR_MAX_ELEMS = max_elements
-        self.numberOfElements = 0
-        self.listOfFiles = []
-
-    def __delete__(self):
-        print('Destructor called, ' + self.dirName + 'was deleted')
-        return
-
-    def list_elements(self):
-        result = self.dirName + ':('
-        for item in self.listOfFiles:
-            if type(item) is Directory:
-                # result += self.dirName #+ '\n'
-                result += item.list_elements()
-            else:
-                result += item.file_name + ', ' + '\n'
-        result += ') '
-        return result
-
-    def move(self, path):
-        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
-            print('This directory is full, try other')
-            return
-        if self.father is not None:
-            self.father.numberOfElements -= 1
-            self.father.listOfFiles.pop(self.father.listOfFiles.index(self))
-        self.father = path
-        self.father.listOfFiles.append(self)
-        self.father.numberOfElements += 1
-        return
+from queue import Queue
 
 
-class BinaryFile:
-    def __init__(self, id, file_name, info=None, father=None):
-        self.fileName = file_name
-        self.info = info
-        self.father = father
-        self.id = id
+class Node:
+    def __init__(self, itemName: str) -> None:
+        self.__itemName = itemName
+        self._isDir = False
 
-    def __delete__(self):
-        print('Destructor called, ' + self.fileName + 'was deleted')
-        return
+    def getName(self) -> str:
+        return self.__itemName
 
-    def move(self, path):
-        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
-            print('This directory is full, try other')
-            return
-        self.father = path
-        self.father.listOfFiles.append(self)
-        self.father.numberOfElements += 1
-        return
-
-    def read(self):
-        return self.info
+    def isDir(self) -> bool:
+        return self._isDir
 
 
-class LogFile:
-    def __init__(self, file_name, info, father=None):
-        self.fileName = file_name
-        self.father = father
-        self.info = info
+class BinaryFile(Node):
+    def __init__(self, fileName: str, fileContent: str) -> None:
+        self._content = fileContent
+        super().__init__(fileName)
 
-    def __delete__(self):
-        print('Destructor called', + self.fileName + 'was deleted')
-        return
-
-    def move(self, path):
-        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
-            print('This directory is full, try other')
-            return
-        self.father = path
-        self.father.listOfFiles.append(self)
-        self.father.numberOfElements += 1
-        return
-
-    def read(self):
-        return self.info
-
-    def append(self, new_line):
-        self.info += new_line
-        self.info += '\n'
+    def read(self) -> str:
+        return self._content
 
 
-class BufferFile:
-    def __init__(self, file_name, max_size=0, father=None):
-        self.fileName = file_name
-        self.father = father
-        self.info = []
-        self.MAX_BUF_FILE_SIZE = max_size
+class LogFile(BinaryFile):
+    def __init__(self, fileName: str, fileContent: str) -> None:
+        super().__init__(fileName, fileContent)
 
-    def __delete__(self):
-        print('Destructor called', + self.file_name + 'was deleted')
-        return
+    def append(self, line) -> None:
+        if len(self._content) == 0:
+            self._content += line
+        else:
+            self._content += f"\n{line}"
 
-    def move(self, path):
-        if path.numberOfElements >= path.DIR_MAX_ELEMS + 1:
-            print('This directory is full, try other')
-            return
-        self.father = path
-        self.father.listOfFiles.append(self)
-        self.father.numberOfElements += 1
-        return
 
-    def push(self, item):
-        if len(self.info) >= self.MAX_BUF_FILE_SIZE:
-            print('This file is full with items')
-            return
-        self.info.append(item)
+class BufferFile(Node):
+    def __init__(self, fileName: str) -> None:
+        self.__buffer = Queue()
+        super().__init__(fileName)
 
-    def consume(self):
-        if len(self.info) >= 1:
-            temp = self.info[0]
-            self.info.pop(0)
-            return temp
+    def push(self, element: str) -> bool:
+        if (self.__buffer.qsize() + 1) < 1000:
+            self.__buffer.put(element)
+            return True
+        else:
+            return False
+
+    def pop(self) -> str:
+        if self.__buffer.empty():
+            return None
+        else:
+            element = self.__buffer.get()
+            return element
+
+    def get_elements(self):
+        return list(self.__buffer.queue)
+
+
+class Directory(Node):
+    def __init__(self, itemName: str) -> None:
+        super().__init__(itemName)
+        self.__items = []
+        self.__parent = None
+        self.__itemsCount = 0
+        self._isDir = True
+
+    def addItem(self, item: Node) -> bool:
+
+        if self.getItemByName(item.getName()) != None or item == None:
+            return False
+
+        if self.__itemsCount < 10:
+            self.__itemsCount += 1
+            self.__items.append(item)
+
+            if item.isDir():
+                item.setParent(self)
+
+            return True
+
+        return False
+
+    def popItem(self, itemName) -> Node:
+        item = self.getItemByName(itemName)
+        self.__items.remove(item)
+        return item
+
+    def getItemByName(self, name: str) -> Node:
+        for item in self.__items:
+            if item.getName() == name:
+                return item
+
         return None
+
+    def items(self) -> list:
+        return self.__items.copy()
+
+    def setParent(self, newParent):
+        self.__parent = newParent
+
+    def getParent(self):
+        return self.__parent
+
+
+class FileSystem:
+    def __init__(self) -> None:
+        self.__root = Directory("root")
+
+    def getRoot(self) -> Directory:
+        return self.__root
+
+    def addItem(self, item, path: str) -> bool:
+        if '/' in item.getName():
+            return False
+
+        itemDir = self.findDir(path)
+        if itemDir == None or item == None:
+            return False
+
+        return itemDir.addItem(item)
+
+    def removeItem(self, itemPath: str) -> bool:
+        if len(itemPath.split('/')) == 1:
+            return False
+
+        item = self.__getItemFromDir(itemPath)
+        if item == None:
+            return False
+
+        return True
+
+    def moveItem(self, itemPath: str, path: str) -> bool:
+        itemDir = self.findDir(path)
+
+        if itemDir == None or len(itemPath.split('/')) == 1:
+            return False
+
+        item = self.__getItemFromDir(itemPath)
+
+        if item == None:
+            return False
+
+        if itemDir.addItem(item):
+            return True
+        else:
+            pathList = itemPath.split('/')
+            pathList.pop()
+            fileDirPath = '/'.join(pathList)
+            fileDir = self.findDir(fileDirPath)
+            fileDir.addItem(item)
+            return False
+
+    def __getItemFromDir(self, itemPath: str) -> Node:
+        pathList = itemPath.split('/')
+        itemName = pathList.pop()
+        itemDirPath = '/'.join(pathList)
+        itemDir = self.findDir(itemDirPath)
+        item = itemDir.popItem(itemName)
+        return item
+
+    def findDir(self, path: str) -> Directory:
+        folders = path.split('/')
+        folders = list(filter(lambda item: item != '', folders))
+
+        if len(folders) == 0:
+            return None
+
+        rootName = folders.pop(0)
+
+        if self.__root.getName() != rootName:
+            return None
+
+        searchedDir = self.__root
+        for folder in folders:
+            subDir = searchedDir.getItemByName(folder)
+
+            if subDir == None or not subDir.isDir():
+                return None
+            searchedDir = subDir
+
+        return searchedDir
+
+    def findFile(self, filePath: str):
+        if filePath is None:
+            return None
+
+        pathList = filePath.split('/')
+        fileName = pathList.pop()
+        fileDirPath = '/'.join(pathList)
+        fileDir = self.findDir(fileDirPath)
+
+        if fileDir is None:
+            return None
+
+        return fileDir.getItemByName(fileName)
+
+
+def get_item_type(item) -> str:
+    if item.isDir():
+        return 'Directory'
+
+    if type(item) is LogFile:
+        return 'LogFile'
+
+    if type(item) is BinaryFile:
+        return 'BinaryFile'
+
+    if type(item) is BufferFile:
+        return 'BufferFile'
+
+    return 'Unknown'
+
+
+def get_file_content(file_type: str, file: Node):
+    if file_type == 'BinaryFile' or file_type == 'LogFile':
+        return file.read()
+
+    if file_type == 'BufferFile':
+        return file.get_elements()
+
+    return ""
+
+
+def get_item_info(item: Node):
+    return {'name': item.getName(), 'isDir': item.isDir(), 'itemType': get_item_type(item)}
+
+
+def get_items(items: list):
+    result = []
+    for item in items:
+        result.append(get_item_info(item))
+
+    return result
+
+
+def get_file_data(file):
+    file_data = get_item_info(file)
+    file_content = get_file_content(file_data['itemType'], file)
+    file_data['file_content'] = file_content
+    return file_data
